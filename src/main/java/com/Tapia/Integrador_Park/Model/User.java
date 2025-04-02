@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "users")
 public class User {
-    private Integer id;
+    private String id;
     private String username;
     private String password;
     private Role role;
@@ -14,18 +14,17 @@ public class User {
 
     }
 
-    public User(Integer id, String username, String password, Role role) {
-        this.id = id;
+    public User(String username, String password, Role role) {
         this.username = username;
         this.password = password;
         this.role = role;
     }
 
-    public Integer getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(String id) {
         this.id = id;
     }
 

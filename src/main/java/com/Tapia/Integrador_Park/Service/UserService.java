@@ -26,9 +26,9 @@ public class UserService {
 
     private void initializeDefaultUsers() {
         if (userRepository.count() == 0) {
-            userRepository.save(new User(1,"admin", passwordEncoder.encode("admin123"), Role.ADMIN));
-            userRepository.save(new User(2,"user", passwordEncoder.encode("user123"), Role.USER));
-            userRepository.save(new User(3,"owner", passwordEncoder.encode("owner123"), Role.OWNER));
+            userRepository.save(new User("admin", passwordEncoder.encode("admin123"), Role.ADMIN));
+            userRepository.save(new User("user", passwordEncoder.encode("user123"), Role.USER));
+            userRepository.save(new User("owner", passwordEncoder.encode("owner123"), Role.OWNER));
         }
     }
 
