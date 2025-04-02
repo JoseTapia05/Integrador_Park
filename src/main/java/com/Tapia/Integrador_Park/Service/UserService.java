@@ -1,7 +1,9 @@
 package com.Tapia.Integrador_Park.Service;
 
 import com.Tapia.Integrador_Park.Model.User;
+import com.Tapia.Integrador_Park.Repository.UserRepository;
 import com.Tapia.Integrador_Park.Role.Role;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,24 +13,34 @@ import java.util.Optional;
 
 @Service
 public class UserService {
-    private final List<User> users;
 
-    public UserService(PasswordEncoder passwordEncoder) {
-        this.users = new ArrayList<>();
-        initializeUsers(passwordEncoder);
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        initializeDefaultUsers();
     }
 
-    private void initializeUsers(PasswordEncoder passwordEncoder) {
-        this.users.addAll(List.of(
-                new User(1, "admin", passwordEncoder.encode("admin123"), Role.ADMIN),
-                new User(2, "user", passwordEncoder.encode("user123"), Role.USER),
-                new User(3, "owner", passwordEncoder.encode("owner123"), Role.OWNER)
-        ));
+    private void initializeDefaultUsers() {
+        if (userRepository.count() == 0) {
+            userRepository.save(new User(1,"admin", passwordEncoder.encode("admin123"), Role.ADMIN));
+            userRepository.save(new User(2,"user", passwordEncoder.encode("user123"), Role.USER));
+            userRepository.save(new User(3,"owner", passwordEncoder.encode("owner123"), Role.OWNER));
+        }
     }
 
     public Optional<User> findByUsername(String username) {
-        return users.stream()
-                .filter(user -> user.getUserName().equals(username))
-                .findFirst();
+        return userRepository.findByUsername(username);
+    }
+
+    public User registerUser(User user) {
+        if (userRepository.existsByUsername(user.getUserName())) {
+            throw new RuntimeException("Username already exists");
+        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userRepository.save(user);
     }
 }

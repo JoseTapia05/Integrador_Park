@@ -1,40 +1,27 @@
 package com.Tapia.Integrador_Park.Model;
 
 import com.Tapia.Integrador_Park.Role.Role;
-import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "users")
-public class User {
-    private Integer id;
+public class RegisterDTO {
     private String username;
     private String password;
     private Role role;
 
-    public User(){
-
+    public RegisterDTO() {
     }
 
-    public User(Integer id, String username, String password, Role role) {
-        this.id = id;
+    public RegisterDTO(String username, String password, Role role) {
         this.username = username;
         this.password = password;
         this.role = role;
     }
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getUserName() {
+    public String getUsername() {
         return username;
     }
 
-    public void setUserName(String userName) {
-        this.username = userName;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {
