@@ -1,11 +1,13 @@
 package com.Tapia.Integrador_Park.Controller;
 
-import com.Tapia.Integrador_Park.Model.RegisterDTO;
-import com.Tapia.Integrador_Park.Model.User;
-import com.Tapia.Integrador_Park.Model.UserDTO;
+import com.Tapia.Integrador_Park.Exceptions.InvalidTokenException;
+import com.Tapia.Integrador_Park.Model.*;
+import com.Tapia.Integrador_Park.Role.AuthProvider;
 import com.Tapia.Integrador_Park.Role.Role;
+import com.Tapia.Integrador_Park.Service.GoogleTokenVerifier;
 import com.Tapia.Integrador_Park.Service.UserService;
 import com.Tapia.Integrador_Park.Util.JwtUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,16 +26,19 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final UserService userService;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             JwtUtil jwtUtil,
             UserDetailsService userDetailsService,
-            UserService userService) {
+            UserService userService,
+            GoogleTokenVerifier googleTokenVerifier) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     @PostMapping("/login")
@@ -56,7 +61,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody RegisterDTO registerDTO) {
         try {
             User user = new User();
-            user.setUserName(registerDTO.getUsername());
+            user.setUsername(registerDTO.getUsername());
             user.setPassword(registerDTO.getPassword());
             user.setRole(registerDTO.getRole() != null ? registerDTO.getRole() : Role.USER);
 
@@ -64,6 +69,34 @@ public class AuthController {
             return ResponseEntity.ok("User registered successfully");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/oauth2/google")
+    public ResponseEntity<?> handleGoogleLogin(@RequestBody GoogleAuthRequest request) {
+        try {
+            // 1. Verificar token y obtener payload
+            GoogleTokenPayload payload = googleTokenVerifier.verify(request.getToken());
+
+            // 2. Validaciones adicionales
+            if (!payload.isEmailVerified()) {
+                return ResponseEntity.badRequest().body("Email no verificado");
+            }
+
+            if (payload.isTokenExpired()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token expirado");
+            }
+
+            // 3. Crear/actualizar usuario en tu sistema
+            User user = userService.processGoogleUser(payload);
+
+            // 4. Generar tu JWT
+            String jwtToken = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
+
+            return ResponseEntity.ok(new AuthResponse(jwtToken, user.getRole().name()));
+
+        } catch (InvalidTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 }
