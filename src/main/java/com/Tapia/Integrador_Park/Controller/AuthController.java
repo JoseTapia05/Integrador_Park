@@ -3,6 +3,7 @@ package com.Tapia.Integrador_Park.Controller;
 import com.Tapia.Integrador_Park.Exceptions.InvalidTokenException;
 import com.Tapia.Integrador_Park.Exceptions.UserAlreadyExistsException;
 import com.Tapia.Integrador_Park.Model.*;
+import com.Tapia.Integrador_Park.Repository.UserRepository;
 import com.Tapia.Integrador_Park.Role.AuthProvider;
 import com.Tapia.Integrador_Park.Role.Role;
 import com.Tapia.Integrador_Park.Service.GoogleTokenVerifier;
@@ -21,6 +22,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,19 +44,25 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final UserService userService;
+    private final UserRepository userRepository;
     private final GoogleTokenVerifier googleTokenVerifier;
+    private final PasswordEncoder passwordEncoder;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             JwtUtil jwtUtil,
             UserDetailsService userDetailsService,
             UserService userService,
-            GoogleTokenVerifier googleTokenVerifier) {
+            GoogleTokenVerifier googleTokenVerifier,
+            PasswordEncoder passwordEncoder,
+            UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
         this.googleTokenVerifier = googleTokenVerifier;
+        this.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/login")
@@ -96,6 +104,35 @@ public class AuthController {
             return ResponseEntity.ok("User registered successfully");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body("El correo electrónico es requerido");
+            }
+
+            Optional<User> userOpt = userService.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Correo no registrado");
+            }
+
+            User user = userOpt.get();
+            String newPassword = generateRandomPassword();
+
+            // Actualizar contraseña directamente sin usar registerUser
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user); // Usar el repositorio directamente
+
+            // Enviar correo (implementación ficticia)
+            sendPasswordResetEmail(user.getEmail(), newPassword);
+
+            return ResponseEntity.ok("Se ha enviado una nueva contraseña a tu correo electrónico");
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Ocurrió un error al procesar tu solicitud");
         }
     }
 
@@ -198,5 +235,32 @@ public class AuthController {
         } catch (InvalidTokenException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
+    }
+
+    private String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        Random random = new Random();
+
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+
+        return sb.toString();
+    }
+
+    private void sendPasswordResetEmail(String email, String newPassword) {
+        // Implementación real dependería de tu servicio de correo
+        System.out.println("Enviando nueva contraseña a " + email);
+        System.out.println("Nueva contraseña: " + newPassword);
+
+        // Ejemplo con JavaMailSender (necesitarías configurarlo):
+    /*
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setTo(email);
+    message.setSubject("Recuperación de contraseña");
+    message.setText("Tu nueva contraseña es: " + newPassword);
+    mailSender.send(message);
+    */
     }
 }

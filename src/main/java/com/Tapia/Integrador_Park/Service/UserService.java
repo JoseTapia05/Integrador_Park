@@ -101,6 +101,11 @@ public class UserService {
                 });
     }
 
+    public void updateUserPassword(User user, String newPassword) {
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
     }
