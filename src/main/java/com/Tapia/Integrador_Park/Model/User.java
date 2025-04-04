@@ -17,7 +17,6 @@ public class User {
     @Indexed(unique = true, sparse = true)
     private String email;
     private String fullName;
-    private String pictureUrl;
     private AuthProvider provider;
 
     public User(){
@@ -86,14 +85,6 @@ public class User {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
-    }
-
-    public String getPictureUrl() {
-        return pictureUrl;
-    }
-
-    public void setPictureUrl(String pictureUrl) {
-        this.pictureUrl = pictureUrl;
     }
 
     public AuthProvider getProvider() {
