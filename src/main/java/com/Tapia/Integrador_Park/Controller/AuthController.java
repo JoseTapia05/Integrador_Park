@@ -2,6 +2,7 @@ package com.Tapia.Integrador_Park.Controller;
 
 import com.Tapia.Integrador_Park.Exceptions.InvalidTokenException;
 import com.Tapia.Integrador_Park.Model.*;
+import com.Tapia.Integrador_Park.Role.AuthProvider;
 import com.Tapia.Integrador_Park.Role.Role;
 import com.Tapia.Integrador_Park.Service.GoogleTokenVerifier;
 import com.Tapia.Integrador_Park.Service.UserService;
@@ -78,39 +79,13 @@ public class AuthController {
             user.setUsername(registerDTO.getUsername());
             user.setPassword(registerDTO.getPassword());
             user.setRole(registerDTO.getRole() != null ? registerDTO.getRole() : Role.USER);
+            user.setEmail(registerDTO.getEmail());
+            user.setProvider(AuthProvider.LOCAL);
 
             userService.registerUser(user);
             return ResponseEntity.ok("User registered successfully");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    @PostMapping("/oauth2/google")
-    public ResponseEntity<?> handleGoogleLogin(@RequestBody GoogleAuthRequest request) {
-        try {
-            // 1. Verificar token y obtener payload
-            GoogleTokenPayload payload = googleTokenVerifier.verify(request.getToken());
-
-            // 2. Validaciones adicionales
-            if (!payload.isEmailVerified()) {
-                return ResponseEntity.badRequest().body("Email no verificado");
-            }
-
-            if (payload.isTokenExpired()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token expirado");
-            }
-
-            // 3. Crear/actualizar usuario en tu sistema
-            User user = userService.processGoogleUser(payload);
-
-            // 4. Generar tu JWT
-            String jwtToken = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
-
-            return ResponseEntity.ok(new AuthResponse(jwtToken, user.getRole().name()));
-
-        } catch (InvalidTokenException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 
@@ -149,6 +124,14 @@ public class AuthController {
                 body.put("name", name);
                 body.put("role", role);
 
+                User newUser = new User();
+                newUser.setUsername(username);
+                newUser.setRole(Role.valueOf(role));
+                newUser.setEmail(username);
+                newUser.setFullName(name);
+                newUser.setProvider(AuthProvider.GOOGLE);
+                userService.registerUser(newUser);
+
                 return ResponseEntity.ok(body);
             } else {
                 return ResponseEntity.badRequest().body("Token de Google inválido.");
@@ -156,6 +139,35 @@ public class AuthController {
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Error al validar el token de Google.");
+        }
+    }
+
+    //ENDPOINT OPCIONAL/ALTERNATIVO AL PRIMERO - NO TIENE USO//
+    @PostMapping("/oauth2/google")
+    public ResponseEntity<?> handleGoogleLogin(@RequestBody GoogleAuthRequest request) {
+        try {
+            // 1. Verificar token y obtener payload
+            GoogleTokenPayload payload = googleTokenVerifier.verify(request.getToken());
+
+            // 2. Validaciones adicionales
+            if (!payload.isEmailVerified()) {
+                return ResponseEntity.badRequest().body("Email no verificado");
+            }
+
+            if (payload.isTokenExpired()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token expirado");
+            }
+
+            // 3. Crear/actualizar usuario en tu sistema
+            User user = userService.processGoogleUser(payload);
+
+            // 4. Generar tu JWT
+            String jwtToken = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
+
+            return ResponseEntity.ok(new AuthResponse(jwtToken, user.getRole().name()));
+
+        } catch (InvalidTokenException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 }

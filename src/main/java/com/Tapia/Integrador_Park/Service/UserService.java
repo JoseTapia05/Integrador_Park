@@ -84,9 +84,7 @@ public class UserService {
                     if (existingUser.getFullName() == null) {
                         existingUser.setFullName(payload.getFullName());
                     }
-                    if (existingUser.getPictureUrl() == null) {
-                        existingUser.setPictureUrl(payload.getPictureUrl());
-                    }
+
                     return userRepository.save(existingUser);
                 })
                 .orElseGet(() -> {
@@ -95,7 +93,6 @@ public class UserService {
                     newUser.setUsername(payload.getEmail()); // Usamos el email como username
                     newUser.setEmail(payload.getEmail());
                     newUser.setFullName(payload.getFullName());
-                    newUser.setPictureUrl(payload.getPictureUrl());
                     newUser.setRole(Role.USER); // Rol por defecto
                     newUser.setProvider(AuthProvider.GOOGLE); // Indicamos que viene de Google
                     newUser.setPassword(null); // No tiene contraseña tradicional
