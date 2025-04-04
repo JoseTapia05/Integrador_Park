@@ -1,6 +1,7 @@
 package com.Tapia.Integrador_Park.Controller;
 
 import com.Tapia.Integrador_Park.Exceptions.InvalidTokenException;
+import com.Tapia.Integrador_Park.Exceptions.UserAlreadyExistsException;
 import com.Tapia.Integrador_Park.Model.*;
 import com.Tapia.Integrador_Park.Role.AuthProvider;
 import com.Tapia.Integrador_Park.Role.Role;
@@ -11,7 +12,9 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import java.util.Collections;
+
+import java.util.*;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,8 +30,6 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -57,7 +58,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody UserDTO user) {
+    public ResponseEntity<?> login(@RequestBody UserDTO user) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword())
         );
@@ -69,7 +70,16 @@ public class AuthController {
                 .orElse("USER");
 
         String token = jwtUtil.generateToken(user.getUsername(), role);
-        return ResponseEntity.ok(token);
+
+        // Crear respuesta con token y datos del usuario
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("user", Map.of(
+                "username", user.getUsername(),
+                "role", role
+        ));
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
@@ -102,7 +112,7 @@ public class AuthController {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
                     new NetHttpTransport(),
                     JacksonFactory.getDefaultInstance())
-                    .setAudience(Collections.singletonList(idClient))  // Usa el clientId inyectado
+                    .setAudience(Collections.singletonList(idClient))
                     .build();
 
             GoogleIdToken googleIdToken = verifier.verify(idToken);
@@ -110,27 +120,43 @@ public class AuthController {
                 GoogleIdToken.Payload payload = googleIdToken.getPayload();
 
                 // Extraer información del usuario
-                String username = payload.getEmail();
+                String email = payload.getEmail();
                 String name = (String) payload.get("name");
-                String role = "USER";  // Rol por defecto o lógica personalizada
 
-                // Generar JWT
-                String jwt = jwtUtil.generateToken(username, role);
+                // Verificar si el usuario ya existe
+                Optional<User> existingUser = userService.findByEmail(email);
+
+                User user;
+                if (existingUser.isPresent()) {
+                    // Usuario existe, lo actualizamos si es necesario
+                    user = existingUser.get();
+                    if (user.getFullName() == null || !user.getFullName().equals(name)) {
+                        user.setFullName(name);
+                        user = userService.registerUser(user);
+                    }
+                } else {
+                    // Usuario no existe, lo creamos
+                    user = new User();
+                    user.setUsername(email);
+                    user.setEmail(email);
+                    user.setFullName(name);
+                    user.setRole(Role.USER); // Rol por defecto
+                    user.setProvider(AuthProvider.GOOGLE);
+                    user = userService.registerUser(user);
+                }
+
+                // Generar JWT con el rol actual del usuario
+                String jwt = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
 
                 // Construir respuesta
                 Map<String, Object> body = new HashMap<>();
                 body.put("token", jwt);
-                body.put("username", username);
-                body.put("name", name);
-                body.put("role", role);
-
-                User newUser = new User();
-                newUser.setUsername(username);
-                newUser.setRole(Role.valueOf(role));
-                newUser.setEmail(username);
-                newUser.setFullName(name);
-                newUser.setProvider(AuthProvider.GOOGLE);
-                userService.registerUser(newUser);
+                body.put("user", Map.of(
+                        "username", user.getUsername(),
+                        "name", user.getFullName(),
+                        "email", user.getEmail(),
+                        "role", user.getRole().name()
+                ));
 
                 return ResponseEntity.ok(body);
             } else {
@@ -139,6 +165,9 @@ public class AuthController {
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Error al validar el token de Google.");
+        } catch (UserAlreadyExistsException e) {
+            // Esto no debería ocurrir ya que verificamos antes de crear
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
