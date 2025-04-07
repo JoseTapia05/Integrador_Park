@@ -11,8 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -52,7 +50,6 @@ public class UserService {
             throw new UserAlreadyExistsException("Email already registered");
         }
 
-        // Solo codifica la contraseña si no es un usuario OAuth (que no tiene contraseña)
         if (user.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
@@ -65,22 +62,15 @@ public class UserService {
         user.setUsername(registerDTO.getUsername());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setEmail(registerDTO.getEmail());
-        user.setRole(Role.USER); // Rol por defecto
+        user.setRole(Role.USER);
         user.setProvider(AuthProvider.LOCAL);
 
         return userRepository.save(user);
     }
 
-    /**
-     * Procesa un usuario que viene de autenticación con Google
-     * - Si el usuario existe por email, lo actualiza
-     * - Si no existe, lo crea como nuevo usuario
-     */
     public User processGoogleUser(GoogleTokenPayload payload) {
-        // Buscar por email primero
         return findByEmail(payload.getEmail())
                 .map(existingUser -> {
-                    // Actualizar datos del usuario existente si es necesario
                     if (existingUser.getFullName() == null) {
                         existingUser.setFullName(payload.getFullName());
                     }
@@ -88,14 +78,13 @@ public class UserService {
                     return userRepository.save(existingUser);
                 })
                 .orElseGet(() -> {
-                    // Crear nuevo usuario para Google
                     User newUser = new User();
                     newUser.setUsername(payload.getEmail()); // Usamos el email como username
                     newUser.setEmail(payload.getEmail());
                     newUser.setFullName(payload.getFullName());
-                    newUser.setRole(Role.USER); // Rol por defecto
-                    newUser.setProvider(AuthProvider.GOOGLE); // Indicamos que viene de Google
-                    newUser.setPassword(null); // No tiene contraseña tradicional
+                    newUser.setRole(Role.USER);
+                    newUser.setProvider(AuthProvider.GOOGLE);
+                    newUser.setPassword(null);
 
                     return userRepository.save(newUser);
                 });

@@ -14,7 +14,7 @@ import static io.jsonwebtoken.Jwts.builder;
 @Component
 public class JwtUtil {
     private static final Key SIGNING_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private static final long EXPIRATION_TIME = 86400000; // 1 day in milliseconds
+    private static final long EXPIRATION_TIME = 86400000;
 
     public String generateToken(String username, String role) {
         return builder()

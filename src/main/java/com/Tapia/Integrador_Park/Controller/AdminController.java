@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ADMIN')")  // Uncommented and activated
+@PreAuthorize("hasRole('ADMIN')")
 @CrossOrigin(origins = "http://localhost:5173")
 public class AdminController {
 

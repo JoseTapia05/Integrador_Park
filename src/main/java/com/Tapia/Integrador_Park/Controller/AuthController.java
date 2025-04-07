@@ -37,7 +37,7 @@ import java.util.Collections;
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Value("${google.client.id}")  // Inyección desde properties
+    @Value("${google.client.id}")
     private String idClient;
 
     private final AuthenticationManager authenticationManager;
@@ -79,7 +79,6 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getUsername(), role);
 
-        // Crear respuesta con token y datos del usuario
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("user", Map.of(
@@ -123,11 +122,9 @@ public class AuthController {
             User user = userOpt.get();
             String newPassword = generateRandomPassword();
 
-            // Actualizar contraseña directamente sin usar registerUser
             user.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(user); // Usar el repositorio directamente
+            userRepository.save(user);
 
-            // Enviar correo (implementación ficticia)
             sendPasswordResetEmail(user.getEmail(), newPassword);
 
             return ResponseEntity.ok("Se ha enviado una nueva contraseña a tu correo electrónico");
@@ -156,36 +153,30 @@ public class AuthController {
             if (googleIdToken != null) {
                 GoogleIdToken.Payload payload = googleIdToken.getPayload();
 
-                // Extraer información del usuario
                 String email = payload.getEmail();
                 String name = (String) payload.get("name");
 
-                // Verificar si el usuario ya existe
                 Optional<User> existingUser = userService.findByEmail(email);
 
                 User user;
                 if (existingUser.isPresent()) {
-                    // Usuario existe, lo actualizamos si es necesario
                     user = existingUser.get();
                     if (user.getFullName() == null || !user.getFullName().equals(name)) {
                         user.setFullName(name);
                         user = userService.registerUser(user);
                     }
                 } else {
-                    // Usuario no existe, lo creamos
                     user = new User();
                     user.setUsername(email);
                     user.setEmail(email);
                     user.setFullName(name);
-                    user.setRole(Role.USER); // Rol por defecto
+                    user.setRole(Role.USER);
                     user.setProvider(AuthProvider.GOOGLE);
                     user = userService.registerUser(user);
                 }
 
-                // Generar JWT con el rol actual del usuario
                 String jwt = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
 
-                // Construir respuesta
                 Map<String, Object> body = new HashMap<>();
                 body.put("token", jwt);
                 body.put("user", Map.of(
@@ -203,37 +194,7 @@ public class AuthController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Error al validar el token de Google.");
         } catch (UserAlreadyExistsException e) {
-            // Esto no debería ocurrir ya que verificamos antes de crear
             return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    //ENDPOINT OPCIONAL/ALTERNATIVO AL PRIMERO - NO TIENE USO//
-    @PostMapping("/oauth2/google")
-    public ResponseEntity<?> handleGoogleLogin(@RequestBody GoogleAuthRequest request) {
-        try {
-            // 1. Verificar token y obtener payload
-            GoogleTokenPayload payload = googleTokenVerifier.verify(request.getToken());
-
-            // 2. Validaciones adicionales
-            if (!payload.isEmailVerified()) {
-                return ResponseEntity.badRequest().body("Email no verificado");
-            }
-
-            if (payload.isTokenExpired()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token expirado");
-            }
-
-            // 3. Crear/actualizar usuario en tu sistema
-            User user = userService.processGoogleUser(payload);
-
-            // 4. Generar tu JWT
-            String jwtToken = jwtUtil.generateToken(user.getUsername(), user.getRole().name());
-
-            return ResponseEntity.ok(new AuthResponse(jwtToken, user.getRole().name()));
-
-        } catch (InvalidTokenException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
     }
 
@@ -245,7 +206,6 @@ public class AuthController {
         for (int i = 0; i < 10; i++) {
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
-
         return sb.toString();
     }
 

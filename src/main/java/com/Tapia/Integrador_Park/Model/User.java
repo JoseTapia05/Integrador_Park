@@ -23,7 +23,6 @@ public class User {
 
     }
 
-    // Constructor para registro tradicional
     public User(String username, String password, Role role, AuthProvider authProvider) {
         this.username = username;
         this.password = password;
@@ -31,7 +30,6 @@ public class User {
         this.provider = authProvider;
     }
 
-    // Constructor para OAuth
     public User(String email, Role role, AuthProvider authProvider) {
         this.username = email; // Usamos email como username
         this.email = email;

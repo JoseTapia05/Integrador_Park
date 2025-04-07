@@ -78,7 +78,6 @@ public class GoogleTokenPayload {
         return issuedAt;
     }
 
-    // Métodos útiles
     public boolean isTokenExpired() {
         return System.currentTimeMillis() > (this.expirationTime * 1000);
     }
