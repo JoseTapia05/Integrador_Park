@@ -23,15 +23,6 @@ public class UserService {
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        initializeDefaultUsers();
-    }
-
-    private void initializeDefaultUsers() {
-        if (userRepository.count() == 0) {
-            userRepository.save(new User("admin", passwordEncoder.encode("admin123"), Role.ADMIN, AuthProvider.LOCAL));
-            userRepository.save(new User("user", passwordEncoder.encode("user123"), Role.USER, AuthProvider.LOCAL));
-            userRepository.save(new User("owner", passwordEncoder.encode("owner123"), Role.OWNER, AuthProvider.LOCAL));
-        }
     }
 
     public Optional<User> findByUsername(String username) {

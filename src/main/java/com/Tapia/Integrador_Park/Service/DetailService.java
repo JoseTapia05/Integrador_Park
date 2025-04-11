@@ -2,7 +2,6 @@ package com.Tapia.Integrador_Park.Service;
 
 import com.Tapia.Integrador_Park.Model.User;
 import com.Tapia.Integrador_Park.Repository.UserRepository;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

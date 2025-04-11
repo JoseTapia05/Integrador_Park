@@ -45,7 +45,6 @@ public class AuthController {
     private final UserDetailsService userDetailsService;
     private final UserService userService;
     private final UserRepository userRepository;
-    private final GoogleTokenVerifier googleTokenVerifier;
     private final PasswordEncoder passwordEncoder;
 
     public AuthController(
@@ -53,14 +52,12 @@ public class AuthController {
             JwtUtil jwtUtil,
             UserDetailsService userDetailsService,
             UserService userService,
-            GoogleTokenVerifier googleTokenVerifier,
             PasswordEncoder passwordEncoder,
             UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
-        this.googleTokenVerifier = googleTokenVerifier;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
     }
